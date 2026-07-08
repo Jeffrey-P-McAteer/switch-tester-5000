@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat version.txt | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Build all platforms
+        run: make all
+
+      - name: Create checksums
+        working-directory: dist
+        run: sha256sum * > checksums.txt
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ steps.version.outputs.version }}"
+          body: |
+            ## Switch Tester 5000 v${{ steps.version.outputs.version }}
+
+            ### Installation
+
+            Download the binary for your platform from the assets below.
+            Place it in a directory of your choice — the config file
+            (`switch-tester-5000.toml`) will be created in the same directory
+            on first run.
+
+            ### Platforms
+            | File | Platform |
+            |------|----------|
+            | `switch-tester-5000-linux-amd64` | Linux x86-64 |
+            | `switch-tester-5000-linux-arm64` | Linux ARM64 |
+            | `switch-tester-5000-darwin-amd64` | macOS Intel |
+            | `switch-tester-5000-darwin-arm64` | macOS Apple Silicon |
+            | `switch-tester-5000-windows-amd64.exe` | Windows x86-64 |
+
+            Verify downloads with `checksums.txt` (SHA-256).
+          files: dist/*
+          draft: false
+          prerelease: false

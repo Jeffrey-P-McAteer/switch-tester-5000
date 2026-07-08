@@ -1,0 +1,4 @@
+dist/
+*.toml
+switch-tester-5000
+switch-tester-5000.exe
