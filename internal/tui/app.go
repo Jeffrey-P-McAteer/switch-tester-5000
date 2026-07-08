@@ -418,16 +418,18 @@ func (a *App) runTest(switchPort int, instrView, progressView *tview.TextView, b
 	}
 	a.testInProgress = true
 
-	// disable begin button visually
-	a.tv.QueueUpdateDraw(func() {
-		beginBtn.SetBackgroundColor(tcell.ColorGray)
-		beginBtn.SetLabel(" Testing... ")
-		instrView.SetText(fmt.Sprintf(
-			"[yellow]Testing port %d...[white]\n\nPlease wait. Do not move cables.\n\nThis will take approximately %d seconds per bandwidth level.",
-			switchPort,
-			a.testDuration,
-		))
-	})
+	// runTest is called from the button's SetSelectedFunc, which runs on the
+	// tview event loop goroutine. QueueUpdateDraw is synchronous: it blocks on
+	// a done-channel waiting for the event loop to drain the update — but the
+	// event loop IS this goroutine, so calling QueueUpdateDraw here deadlocks.
+	// Update the widgets directly instead; tview redraws after the handler returns.
+	beginBtn.SetBackgroundColor(tcell.ColorGray)
+	beginBtn.SetLabel(" Testing... ")
+	instrView.SetText(fmt.Sprintf(
+		"[yellow]Testing port %d...[white]\n\nPlease wait. Do not move cables.\n\nThis will take approximately %d seconds per bandwidth level.",
+		switchPort,
+		a.testDuration,
+	))
 
 	sender := network.NewSender(a.mirrorIP, a.mirrorPort, a.listenPort, a.packetSize)
 
